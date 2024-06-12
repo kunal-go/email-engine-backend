@@ -21,7 +21,7 @@ export class UserController {
   async registerUser(@Body() input: RegisterUserInput) {
     const hashedPassword = createHash(input.password);
     const createdId = await this.userService.createUser({
-      username: input.username,
+      username: input.username.toLowerCase(),
       hashedPassword,
     });
 

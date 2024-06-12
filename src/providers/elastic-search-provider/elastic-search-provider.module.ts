@@ -9,13 +9,14 @@ import { ElasticSearchProviderService } from './elastic-search-provider.service'
     ElasticsearchModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService<Configuration>) => ({
-        node: configService.get('ES_DB_HOST'),
-        auth: {
-          username: 'elastic',
-          password: configService.get('ES_DB_PASSWORD'),
-        },
-      }),
+      useFactory: async (configService: ConfigService<Configuration>) =>
+        ({
+          node: configService.get('ES_DB_HOST'),
+          auth: {
+            username: 'elastic',
+            password: configService.get('ES_DB_PASSWORD'),
+          },
+        }) as any,
     }),
   ],
   providers: [ElasticSearchProviderService],

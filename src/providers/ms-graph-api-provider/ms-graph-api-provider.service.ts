@@ -2,6 +2,7 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import { Configuration } from '../../configuration';
+import { MsGraphMailFolder, MsGraphUser } from './types';
 
 @Injectable()
 export class MsGraphApiProviderService {
@@ -45,23 +46,42 @@ export class MsGraphApiProviderService {
     }
   }
 
-  async getUser(
-    accessToken: string,
-  ): Promise<{ id: string; name: string; email: string }> {
+  async getUser(accessToken: string): Promise<MsGraphUser> {
     try {
       const response = await axios.get(`https://graph.microsoft.com/v1.0/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      return {
-        id: response.data.id,
-        name: response.data.displayName,
-        email: response.data.mail,
-      };
+      return response.data;
     } catch (err) {
       if (err instanceof AxiosError) {
         console.log('Axios error while fetching user details', err.message);
         throw new UnprocessableEntityException(
           'Something while fetching user details from Microsoft',
+        );
+      }
+      throw err;
+    }
+  }
+
+  async listMailFolders({
+    accessToken,
+  }: {
+    accessToken: string;
+  }): Promise<MsGraphMailFolder[]> {
+    try {
+      const response = await axios.get(
+        `https://graph.microsoft.com/v1.0/me/mailFolders`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      return response.data.value;
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        console.log(
+          'Axios error while fetching mail folders',
+          err.response?.data.error,
+        );
+        throw new UnprocessableEntityException(
+          'Something while fetching mail folder from Microsoft',
         );
       }
       throw err;

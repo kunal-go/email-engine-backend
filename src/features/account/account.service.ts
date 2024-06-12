@@ -2,7 +2,7 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
 import { MsGraphApiProviderService } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.service';
 import { UserService } from '../user/user.service';
-import { AccountType } from './types';
+import { AccountEntity, AccountType } from './types';
 
 @Injectable()
 export class AccountService {
@@ -25,10 +25,7 @@ export class AccountService {
       await this.msGraphApiProvider.createTokens(payload.authorizationCode);
     const microsoftUser = await this.msGraphApiProvider.getUser(accessToken);
 
-    const account = await this.getUserAccountByEmail(
-      user.id,
-      microsoftUser.email,
-    );
+    const account = await this.getAccountByEmail(user.id, microsoftUser.mail);
     if (account) {
       throw new UnprocessableEntityException(
         'Account already exists with this email',
@@ -36,35 +33,51 @@ export class AccountService {
     }
 
     const index = this.getAccountIndexName(user.id);
-    return await this.elasticSearchProvider.createDocument(index, {
-      type: AccountType.Microsoft,
-      createdAt: new Date(),
-      email: microsoftUser.email,
-      userId: microsoftUser.id,
-      name: microsoftUser.name,
-      label: microsoftUser.email,
-      accessToken,
-      refreshToken,
-    });
+    return await this.elasticSearchProvider.createDocument<AccountEntity>(
+      index,
+      {
+        type: AccountType.Microsoft,
+        createdAt: Date.now(),
+        email: microsoftUser.mail,
+        externalId: microsoftUser.id,
+        name: microsoftUser.displayName,
+        label: microsoftUser.mail,
+        accessToken,
+        refreshToken,
+      },
+    );
   }
 
   private getAccountIndexName(userId: string) {
-    return `accounts-${userId}`;
+    return `account-${userId}`;
   }
 
-  async getUserAccountByEmail(userId: string, email: string) {
+  async getAccountByEmail(userId: string, email: string) {
     const index = this.getAccountIndexName(userId);
-    const accounts = await this.elasticSearchProvider.listDocuments(index, {
-      match: { email },
-    });
+    const accounts =
+      await this.elasticSearchProvider.listDocuments<AccountEntity>(index, {
+        match: { email },
+      });
     if (accounts.count === 0) {
       return null;
     }
     return accounts.list[0];
   }
 
-  async listUserAccounts(userId: string) {
+  async getAccountById(userId: string, accountId: string) {
     const index = this.getAccountIndexName(userId);
-    return await this.elasticSearchProvider.listDocuments(index);
+    const accounts =
+      await this.elasticSearchProvider.listDocuments<AccountEntity>(index, {
+        ids: { values: [accountId] },
+      });
+    if (accounts.count === 0) {
+      return null;
+    }
+    return accounts.list[0];
+  }
+
+  async listAccounts(userId: string) {
+    const index = this.getAccountIndexName(userId);
+    return await this.elasticSearchProvider.listDocuments<AccountEntity>(index);
   }
 }

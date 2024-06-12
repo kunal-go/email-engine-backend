@@ -1,8 +1,11 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
+import { UserEntity } from './types';
 
 @Injectable()
 export class UserService {
+  private indexName = 'user';
+
   constructor(
     private readonly elasticSearchProvider: ElasticSearchProviderService,
   ) {}
@@ -15,17 +18,21 @@ export class UserService {
       );
     }
 
-    return await this.elasticSearchProvider.createDocument('users', {
-      username: payload.username,
-      hashedPassword: payload.hashedPassword,
-      createdAt: new Date(),
-    });
+    return await this.elasticSearchProvider.createDocument<UserEntity>(
+      this.indexName,
+      {
+        username: payload.username,
+        hashedPassword: payload.hashedPassword,
+        createdAt: Date.now(),
+      },
+    );
   }
 
   async getUserByUsername(username: string) {
-    const users = await this.elasticSearchProvider.listDocuments('users', {
-      match: { username },
-    });
+    const users = await this.elasticSearchProvider.listDocuments<UserEntity>(
+      this.indexName,
+      { match: { username } },
+    );
     if (users.count === 0) {
       return null;
     }
@@ -33,9 +40,10 @@ export class UserService {
   }
 
   async getUserById(id: string) {
-    const users = await this.elasticSearchProvider.listDocuments('users', {
-      ids: { values: [id] },
-    });
+    const users = await this.elasticSearchProvider.listDocuments<UserEntity>(
+      this.indexName,
+      { ids: { values: [id] } },
+    );
     if (users.count === 0) {
       return null;
     }
@@ -43,14 +51,8 @@ export class UserService {
   }
 
   async listUsers() {
-    return await this.elasticSearchProvider.listDocuments('users');
-  }
-
-  async deleteUser(username: string) {
-    const user = await this.getUserByUsername(username);
-    if (!user) {
-      throw new UnprocessableEntityException('User does not exist');
-    }
-    return await this.elasticSearchProvider.deleteDocument('users', user.id);
+    return await this.elasticSearchProvider.listDocuments<UserEntity>(
+      this.indexName,
+    );
   }
 }

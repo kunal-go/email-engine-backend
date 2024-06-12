@@ -9,5 +9,6 @@ import { AccountService } from './account.service';
   imports: [UserModule, ElasticSearchProviderModule, MsGraphApiProviderModule],
   controllers: [AccountController],
   providers: [AccountService],
+  exports: [AccountService],
 })
 export class AccountModule {}

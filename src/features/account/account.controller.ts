@@ -1,16 +1,27 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
 import { Configuration } from '../../configuration';
 import { AccountService } from './account.service';
-import { LinkMicrosoftAccountInput } from './inputs/link-microsofr-account.input';
+import { LinkMicrosoftAccountInput } from './inputs/link-microsoft-account.input';
+import { SYNC_ACCOUNT_DATA_EVENT } from '../../common/events';
 
 @Controller('/account')
 export class AccountController {
   constructor(
     private readonly config: ConfigService<Configuration>,
     private readonly accountService: AccountService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   @Get('/microsoft-auth/url')
@@ -40,7 +51,7 @@ export class AccountController {
   @Get()
   async listUserAccounts(@Req() req: Request) {
     const { userId } = authorizeRequest(req);
-    const accounts = await this.accountService.listUserAccounts(userId);
+    const accounts = await this.accountService.listAccounts(userId);
     return {
       count: accounts.count,
       list: accounts.list.map((el) => ({
@@ -52,5 +63,20 @@ export class AccountController {
         createdAt: el.createdAt,
       })),
     };
+  }
+
+  @Post(':accountId/sync')
+  async syncAccountMailData(
+    @Req() req: Request,
+    @Param('accountId') accountId: string,
+  ) {
+    const { userId } = authorizeRequest(req);
+    const account = await this.accountService.getAccountById(userId, accountId);
+    if (!account) {
+      throw new UnprocessableEntityException('Account not found');
+    }
+
+    this.eventEmitter.emit(SYNC_ACCOUNT_DATA_EVENT, { userId, accountId });
+    return { message: 'Data syncing process started.' };
   }
 }
