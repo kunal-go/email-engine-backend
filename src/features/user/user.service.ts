@@ -26,20 +26,20 @@ export class UserService {
     const users = await this.elasticSearchProvider.listDocuments('users', {
       match: { username },
     });
-    if (users.length === 0) {
+    if (users.count === 0) {
       return null;
     }
-    return users[0];
+    return users.list[0];
   }
 
   async getUserById(id: string) {
     const users = await this.elasticSearchProvider.listDocuments('users', {
       ids: { values: [id] },
     });
-    if (users.length === 0) {
+    if (users.count === 0) {
       return null;
     }
-    return users[0];
+    return users.list[0];
   }
 
   async listUsers() {

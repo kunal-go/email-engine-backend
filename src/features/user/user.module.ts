@@ -7,5 +7,6 @@ import { ElasticSearchProviderModule } from '../../providers/elastic-search-prov
   imports: [ElasticSearchProviderModule],
   controllers: [UserController],
   providers: [UserService],
+  exports: [UserService],
 })
 export class UserModule {}

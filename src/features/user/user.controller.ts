@@ -62,10 +62,13 @@ export class UserController {
   async listUsers() {
     // TODO: Protect this endpoint with an admin check
     const users = await this.userService.listUsers();
-    return users.map((el) => ({
-      id: el.id,
-      username: el.username,
-      createdAt: el.createdAt,
-    }));
+    return {
+      count: users.count,
+      list: users.list.map((el) => ({
+        id: el.id,
+        username: el.username,
+        createdAt: el.createdAt,
+      })),
+    };
   }
 }

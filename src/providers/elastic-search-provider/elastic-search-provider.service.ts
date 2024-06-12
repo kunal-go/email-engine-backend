@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 export class ElasticSearchProviderService {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
-  async createDocument(index: string, document: any) {
+  async createDocument(index: string, document: any): Promise<string> {
     const id = randomUUID();
     const createdDocument = await this.elasticsearchService.create({
       id,
@@ -16,15 +16,29 @@ export class ElasticSearchProviderService {
     return createdDocument.body._id;
   }
 
-  async listDocuments(index: string, query?: any) {
-    const documents = await this.elasticsearchService.search({
-      index,
-      body: { query },
-    });
-    return documents.body.hits.hits.map((hit) => ({
-      id: hit._id,
-      ...hit._source,
-    }));
+  async listDocuments(
+    index: string,
+    query?: any,
+  ): Promise<{ count: number; list: any[] }> {
+    try {
+      const [count, documents] = await Promise.all([
+        this.elasticsearchService.count({ index, body: { query } }),
+        this.elasticsearchService.search({ index, body: { query } }),
+      ]);
+
+      return {
+        count: count.body.count,
+        list: documents.body.hits.hits.map((hit) => ({
+          id: hit._id,
+          ...hit._source,
+        })),
+      };
+    } catch (err) {
+      if (err.meta.statusCode === 404) {
+        return { count: 0, list: [] };
+      }
+      throw err;
+    }
   }
 
   async deleteDocument(index: string, id: string) {
