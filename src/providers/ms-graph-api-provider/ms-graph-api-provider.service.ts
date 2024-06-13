@@ -2,11 +2,75 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import { Configuration } from '../../configuration';
+import { AccountService } from '../../features/account/account.service';
+import { AccountEntity } from '../../features/account/types';
 import { MsGraphMailFolder, MsGraphUser } from './types';
 
 @Injectable()
 export class MsGraphApiProviderService {
-  constructor(private readonly config: ConfigService<Configuration>) {}
+  constructor(
+    private readonly config: ConfigService<Configuration>,
+    private readonly accountService: AccountService,
+  ) {}
+
+  async callApi(payload: {
+    account?: AccountEntity;
+    url: string;
+    method: 'get' | 'post' | 'put' | 'delete';
+    body?: any;
+    headers?: Record<string, string>;
+    actionMessage?: string;
+  }) {
+    try {
+      const headers = payload.headers || {};
+      if (payload.account?.accessToken) {
+        headers.Authorization = `Bearer ${payload.account?.accessToken}`;
+      }
+
+      const response = await axios({
+        method: payload.method,
+        url: payload.url,
+        data: payload.body,
+        headers,
+      });
+      return response.data;
+    } catch (err) {
+      if (!(err instanceof AxiosError)) {
+        throw err;
+      }
+
+      const code = err.response?.data?.error?.code;
+      if (code === 'InvalidAuthenticationToken') {
+        if (payload.account) {
+          console.log('Access token expired, refreshing tokens');
+          const tokens = await this.createTokensByRefreshToken(
+            payload.account.refreshToken,
+          );
+          await this.accountService.updateAccountTokens(
+            payload.account,
+            tokens,
+          );
+          payload.account.accessToken = tokens.accessToken;
+          payload.account.refreshToken = tokens.refreshToken;
+
+          console.log('Tokens refreshed, updating account tokens');
+          return await this.callApi(payload);
+        }
+      }
+
+      if (payload.actionMessage) {
+        console.log('Axios error while ' + payload.actionMessage, err.message);
+        throw new UnprocessableEntityException(
+          `Got error while ${payload.actionMessage} from microsoft`,
+        );
+      }
+
+      console.log('Axios error', err.message);
+      throw new UnprocessableEntityException(
+        'Something went wrong while syncing data from microsoft',
+      );
+    }
+  }
 
   async createTokens(
     authorizationCode: string,
@@ -46,6 +110,44 @@ export class MsGraphApiProviderService {
     }
   }
 
+  async createTokensByRefreshToken(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const tenantId = this.config.get('MS_GRAPH_TENANT_ID');
+
+    try {
+      const resp = await axios.post(
+        `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+        {
+          client_id: this.config.get('MS_GRAPH_CLIENT_ID'),
+          scope: 'openid profile email User.Read Mail.Read offline_access',
+          redirect_uri: this.config.get('MS_GRAPH_REDIRECT_URI'),
+          grant_type: 'refresh_token',
+          client_secret: this.config.get('MS_GRAPH_CLIENT_SECRET'),
+          refresh_token: refreshToken,
+        },
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      );
+      const accessToken = resp.data.access_token;
+      const newRefreshToken = resp.data.refresh_token;
+
+      if (!accessToken || !newRefreshToken) {
+        throw new UnprocessableEntityException(
+          'Unable to get access token and refresh token from Microsoft',
+        );
+      }
+      return { accessToken, refreshToken: newRefreshToken };
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        console.log('Axios error while creating tokens', err.message);
+        throw new UnprocessableEntityException(
+          'Something while linking account with Microsoft',
+        );
+      }
+      throw err;
+    }
+  }
+
   async getUser(accessToken: string): Promise<MsGraphUser> {
     try {
       const response = await axios.get(`https://graph.microsoft.com/v1.0/me`, {
@@ -63,28 +165,15 @@ export class MsGraphApiProviderService {
     }
   }
 
-  async listMailFolders({
-    accessToken,
-  }: {
-    accessToken: string;
+  async listMailFolders(payload: {
+    account: AccountEntity;
   }): Promise<MsGraphMailFolder[]> {
-    try {
-      const response = await axios.get(
-        `https://graph.microsoft.com/v1.0/me/mailFolders`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-      return response.data.value;
-    } catch (err) {
-      if (err instanceof AxiosError) {
-        console.log(
-          'Axios error while fetching mail folders',
-          err.response?.data.error,
-        );
-        throw new UnprocessableEntityException(
-          'Something while fetching mail folder from Microsoft',
-        );
-      }
-      throw err;
-    }
+    const response = await this.callApi({
+      ...payload,
+      method: 'get',
+      url: `https://graph.microsoft.com/v1.0/me/mailFolders`,
+      actionMessage: 'fetching mail folders',
+    });
+    return response.value;
   }
 }

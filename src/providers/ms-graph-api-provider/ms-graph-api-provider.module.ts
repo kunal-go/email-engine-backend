@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { AccountModule } from '../../features/account/account.module';
 import { MsGraphApiProviderService } from './ms-graph-api-provider.service';
 
 @Module({
-  imports: [],
+  imports: [forwardRef(() => AccountModule)],
   providers: [MsGraphApiProviderService],
   exports: [MsGraphApiProviderService],
 })

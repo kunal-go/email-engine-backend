@@ -29,7 +29,8 @@ export class UserService {
   }
 
   async getUserByUsername(username: string) {
-    const users = await this.elasticSearchProvider.listDocuments<UserEntity>(
+    const users = await this.elasticSearchProvider.listDocuments(
+      UserEntity,
       this.indexName,
       { match: { username } },
     );
@@ -40,7 +41,8 @@ export class UserService {
   }
 
   async getUserById(id: string) {
-    const users = await this.elasticSearchProvider.listDocuments<UserEntity>(
+    const users = await this.elasticSearchProvider.listDocuments(
+      UserEntity,
       this.indexName,
       { ids: { values: [id] } },
     );
@@ -51,7 +53,8 @@ export class UserService {
   }
 
   async listUsers() {
-    return await this.elasticSearchProvider.listDocuments<UserEntity>(
+    return await this.elasticSearchProvider.listDocuments(
+      UserEntity,
       this.indexName,
     );
   }

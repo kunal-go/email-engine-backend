@@ -1,4 +1,9 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  UnprocessableEntityException,
+  forwardRef,
+} from '@nestjs/common';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
 import { MsGraphApiProviderService } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.service';
 import { UserService } from '../user/user.service';
@@ -8,6 +13,7 @@ import { AccountEntity, AccountType } from './types';
 export class AccountService {
   constructor(
     private readonly elasticSearchProvider: ElasticSearchProviderService,
+    @Inject(forwardRef(() => MsGraphApiProviderService))
     private readonly msGraphApiProvider: MsGraphApiProviderService,
     private readonly userService: UserService,
   ) {}
@@ -55,21 +61,40 @@ export class AccountService {
   async getAccountByEmail(userId: string, email: string) {
     const index = this.getAccountIndexName(userId);
     const accounts =
-      await this.elasticSearchProvider.listDocuments<AccountEntity>(index, {
-        match: { email },
-      });
+      await this.elasticSearchProvider.listDocuments<AccountEntity>(
+        AccountEntity,
+        index,
+        { match: { email } },
+      );
     if (accounts.count === 0) {
       return null;
     }
+
+    return accounts.list[0];
+  }
+
+  async getAccountByAccessToken(userId: string, accessToken: string) {
+    const index = this.getAccountIndexName(userId);
+    const accounts =
+      await this.elasticSearchProvider.listDocuments<AccountEntity>(
+        AccountEntity,
+        index,
+        { match: { accessToken } },
+      );
+    if (accounts.count === 0) {
+      return null;
+    }
+
     return accounts.list[0];
   }
 
   async getAccountById(userId: string, accountId: string) {
     const index = this.getAccountIndexName(userId);
-    const accounts =
-      await this.elasticSearchProvider.listDocuments<AccountEntity>(index, {
-        ids: { values: [accountId] },
-      });
+    const accounts = await this.elasticSearchProvider.listDocuments(
+      AccountEntity,
+      index,
+      { ids: { values: [accountId] } },
+    );
     if (accounts.count === 0) {
       return null;
     }
@@ -78,6 +103,17 @@ export class AccountService {
 
   async listAccounts(userId: string) {
     const index = this.getAccountIndexName(userId);
-    return await this.elasticSearchProvider.listDocuments<AccountEntity>(index);
+    return await this.elasticSearchProvider.listDocuments(AccountEntity, index);
+  }
+
+  async updateAccountTokens(
+    account: AccountEntity,
+    tokens: { accessToken: string; refreshToken: string },
+  ) {
+    await this.elasticSearchProvider.updateDocument<AccountEntity>(
+      account.index,
+      account.id,
+      { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+    );
   }
 }

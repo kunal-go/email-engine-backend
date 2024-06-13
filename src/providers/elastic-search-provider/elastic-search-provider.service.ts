@@ -1,14 +1,16 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { randomUUID } from 'crypto';
+import { BaseEntity } from '../../common/base-entity';
+import { PayloadShape } from '../../common/types';
 
 @Injectable()
 export class ElasticSearchProviderService {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
-  async createDocument<T extends Record<string, any>>(
+  async createDocument<T extends BaseEntity>(
     index: string,
-    document: Omit<T, 'id'>,
+    document: PayloadShape<T>,
   ): Promise<string> {
     try {
       const id = randomUUID();
@@ -25,7 +27,8 @@ export class ElasticSearchProviderService {
     }
   }
 
-  async listDocuments<T extends Record<string, any>>(
+  async listDocuments<T extends BaseEntity>(
+    Entity: new (...args: any[]) => T,
     index: string,
     query?: any,
   ): Promise<{ count: number; list: T[] }> {
@@ -37,10 +40,9 @@ export class ElasticSearchProviderService {
 
       return {
         count: count.body.count,
-        list: documents.body.hits.hits.map((hit) => ({
-          id: hit._id,
-          ...hit._source,
-        })),
+        list: documents.body.hits.hits.map(
+          (hit) => new Entity(index, hit._id, { ...hit._source }),
+        ),
       };
     } catch (err) {
       if (err.meta.statusCode === 404) {
@@ -56,10 +58,10 @@ export class ElasticSearchProviderService {
     await this.elasticsearchService.delete({ id, index });
   }
 
-  async updateDocument<T extends Record<string, any>>(
+  async updateDocument<T extends BaseEntity>(
     index: string,
     id: string,
-    document: Omit<T, 'id'>,
+    document: Partial<PayloadShape<T>>,
   ) {
     await this.elasticsearchService.update({
       id,
