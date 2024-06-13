@@ -32,7 +32,7 @@ export class MailFolderController {
         itemCount: el.itemCount,
         unreadItemCount: el.unreadItemCount,
         syncedItemCount: el.syncedItemCount,
-        lastSyncedAt: el.lastedSyncedAt,
+        lastSyncedAt: el.lastSyncedAt,
       })),
     };
   }

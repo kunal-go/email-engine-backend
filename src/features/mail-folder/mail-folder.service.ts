@@ -1,6 +1,9 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
-import { SYNC_ACCOUNT_DATA_EVENT } from '../../common/events';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import {
+  SYNC_ACCOUNT_DATA_EVENT,
+  SYNC_ACCOUNT_MAIL_MESSAGES,
+} from '../../common/events';
 import { PayloadShape } from '../../common/types';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
 import { MsGraphApiProviderService } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.service';
@@ -13,10 +16,11 @@ export class MailFolderService {
     private readonly elasticSearchProvider: ElasticSearchProviderService,
     private readonly msGraphApiProvider: MsGraphApiProviderService,
     private readonly accountService: AccountService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private getMailFolderIndexName(accountId: string) {
-    return `mail-folder-${accountId}`;
+    return `mail-folder__${accountId}`;
   }
 
   async getMailFolderById(accountId: string, id: string) {
@@ -75,13 +79,13 @@ export class MailFolderService {
 
   async updateMailFolder(
     accountId: string,
-    mailFolder: MailFolderEntity,
+    mailFolderId: string,
     payload: PayloadShape<MailFolderEntity>,
   ) {
     const index = this.getMailFolderIndexName(accountId);
     return await this.elasticSearchProvider.updateDocument(
       index,
-      mailFolder.id,
+      mailFolderId,
       payload,
     );
   }
@@ -135,13 +139,13 @@ export class MailFolderService {
           sizeInBytes: externalMailFolder.sizeInBytes,
           unreadItemCount: externalMailFolder.unreadItemCount,
           syncedItemCount: localMailFolder?.syncedItemCount || 0,
-          lastedSyncedAt: localMailFolder?.lastedSyncedAt || null,
+          lastSyncedAt: localMailFolder?.lastSyncedAt || null,
           skipToken: localMailFolder?.skipToken || null,
           deltaToken: localMailFolder?.deltaToken || null,
         };
 
         if (localMailFolder) {
-          await this.updateMailFolder(accountId, localMailFolder, payload);
+          await this.updateMailFolder(accountId, localMailFolder.id, payload);
           updatedItemCount++;
           continue;
         }
@@ -164,6 +168,11 @@ export class MailFolderService {
       console.log(
         `Mail folders sync completed: Created: ${createdItemCount}, Updated: ${updatedItemCount}, Removed: ${removedItemCount} mail folders.`,
       );
+
+      this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_MESSAGES, {
+        userId,
+        accountId,
+      });
     } catch (err) {
       console.log('Error while syncing mail folders:', err.message);
     }

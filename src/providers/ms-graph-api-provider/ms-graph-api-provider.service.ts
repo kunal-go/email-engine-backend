@@ -4,7 +4,13 @@ import axios, { AxiosError } from 'axios';
 import { Configuration } from '../../configuration';
 import { AccountService } from '../../features/account/account.service';
 import { AccountEntity } from '../../features/account/types';
-import { MsGraphMailFolder, MsGraphUser } from './types';
+import { MailFolderEntity } from '../../features/mail-folder/types';
+import {
+  MsGraphMailFolder,
+  MsGraphMessage,
+  MsGraphRemovedMessage,
+  MsGraphUser,
+} from './types';
 
 @Injectable()
 export class MsGraphApiProviderService {
@@ -59,6 +65,7 @@ export class MsGraphApiProviderService {
       }
 
       if (payload.actionMessage) {
+        console.log(err.response?.data);
         console.log('Axios error while ' + payload.actionMessage, err.message);
         throw new UnprocessableEntityException(
           `Got error while ${payload.actionMessage} from microsoft`,
@@ -175,5 +182,42 @@ export class MsGraphApiProviderService {
       actionMessage: 'fetching mail folders',
     });
     return response.value;
+  }
+
+  async getDeltaMessages(payload: {
+    account: AccountEntity;
+    mailFolder: MailFolderEntity;
+  }): Promise<{
+    updatedList: MsGraphMessage[];
+    removedList: MsGraphRemovedMessage[];
+    deltaToken?: string;
+    skipToken?: string;
+  }> {
+    const url = new URL(
+      `https://graph.microsoft.com/v1.0/me/mailFolders/${payload.mailFolder.externalId}/messages/delta`,
+    );
+    if (payload.mailFolder.deltaToken) {
+      url.searchParams.append('$deltatoken', payload.mailFolder.deltaToken);
+    }
+    if (payload.mailFolder.skipToken) {
+      url.searchParams.append('$skipToken', payload.mailFolder.skipToken);
+    }
+
+    const response = await this.callApi({
+      account: payload.account,
+      method: 'get',
+      url: url.toString(),
+      headers: { 'odata.maxpagesize': '20' },
+      actionMessage: 'fetching delta messages from mail folder',
+    });
+
+    const deltaLink = response['@odata.deltaLink'];
+    const deltaToken = deltaLink?.split('$deltatoken=')[1];
+    const nextLink = response['@odata.nextLink'];
+    const skipToken = nextLink?.split('$skiptoken=')[1];
+
+    const removedList = response.value?.filter((el) => el['@removed']) || [];
+    const updatedList = response.value?.filter((el) => !el['@removed']) || [];
+    return { updatedList, removedList, deltaToken, skipToken };
   }
 }

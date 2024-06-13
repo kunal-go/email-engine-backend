@@ -55,7 +55,7 @@ export class AccountService {
   }
 
   private getAccountIndexName(userId: string) {
-    return `account-${userId}`;
+    return `account__${userId}`;
   }
 
   async getAccountByEmail(userId: string, email: string) {

@@ -4,6 +4,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { configuration } from '../configuration';
 import { AccountModule } from '../features/account/account.module';
 import { MailFolderModule } from '../features/mail-folder/mail-folder.module';
+import { MailMessageModule } from '../features/mail-message/mail-message.module';
 import { UserModule } from '../features/user/user.module';
 import { ElasticSearchProviderModule } from '../providers/elastic-search-provider/elastic-search-provider.module';
 import { AppController } from './app.controller';
@@ -16,6 +17,7 @@ import { AppController } from './app.controller';
     UserModule,
     AccountModule,
     MailFolderModule,
+    MailMessageModule,
   ],
   controllers: [AppController],
 })

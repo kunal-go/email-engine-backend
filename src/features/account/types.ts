@@ -16,7 +16,7 @@ export class AccountEntity extends BaseEntity {
   refreshToken: string;
 
   get userId() {
-    return this.index.split('-')[1];
+    return this.index.split('__')[1];
   }
 
   constructor(index: string, id: string, data: PayloadShape<AccountEntity>) {
