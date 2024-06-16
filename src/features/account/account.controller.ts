@@ -11,10 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
+import { SYNC_ACCOUNT_DATA_EVENT } from '../../common/events';
 import { Configuration } from '../../configuration';
 import { AccountService } from './account.service';
 import { LinkMicrosoftAccountInput } from './inputs/link-microsoft-account.input';
-import { SYNC_ACCOUNT_DATA_EVENT } from '../../common/events';
 
 @Controller('/account')
 export class AccountController {
@@ -49,7 +49,7 @@ export class AccountController {
   }
 
   @Get()
-  async listUserAccounts(@Req() req: Request) {
+  async listAccounts(@Req() req: Request) {
     const { userId } = authorizeRequest(req);
     const accounts = await this.accountService.listAccounts(userId);
     return {
@@ -62,6 +62,23 @@ export class AccountController {
         label: el.label,
         createdAt: el.createdAt,
       })),
+    };
+  }
+
+  @Get(':accountId')
+  async getAccount(@Req() req: Request, @Param('accountId') accountId: string) {
+    const { userId } = authorizeRequest(req);
+    const account = await this.accountService.getAccountById(userId, accountId);
+    if (!account) {
+      throw new UnprocessableEntityException('Account not found');
+    }
+    return {
+      id: account.id,
+      type: account.type,
+      email: account.email,
+      name: account.name,
+      label: account.label,
+      createdAt: account.createdAt,
     };
   }
 
