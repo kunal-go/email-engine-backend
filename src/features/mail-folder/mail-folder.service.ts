@@ -91,7 +91,9 @@ export class MailFolderService {
   }
 
   async deleteMailFolder(accountId: string, id: string) {
-    // TODO: Delete all mail items in the mail folder
+    // Delete all mail messages in this mail folder
+    await this.elasticSearchProvider.deleteIndex('mail-message__' + id);
+
     const index = this.getMailFolderIndexName(accountId);
     await this.elasticSearchProvider.deleteDocument(index, id);
   }

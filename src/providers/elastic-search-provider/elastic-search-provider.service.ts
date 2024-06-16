@@ -71,4 +71,8 @@ export class ElasticSearchProviderService {
     });
     await this.elasticsearchService.indices.refresh({ index });
   }
+
+  async deleteIndex(index: string) {
+    await this.elasticsearchService.indices.delete({ index });
+  }
 }
