@@ -14,7 +14,7 @@ export class MailMessageController {
   ) {}
 
   @Get()
-  async listMailFolders(
+  async listMailMessages(
     @Req() req: Request,
     @Param('accountId') accountId: string,
     @Param('mailFolderId') mailFolderId: string,

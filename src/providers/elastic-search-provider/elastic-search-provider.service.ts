@@ -56,17 +56,19 @@ export class ElasticSearchProviderService {
 
   async deleteDocument(index: string, id: string) {
     await this.elasticsearchService.delete({ id, index });
+    await this.elasticsearchService.indices.refresh({ index });
   }
 
   async updateDocument<T extends BaseEntity>(
     index: string,
     id: string,
-    document: Partial<PayloadShape<T>>,
+    updatedFields: Partial<PayloadShape<T>>,
   ) {
     await this.elasticsearchService.update({
       id,
       index,
-      body: { doc: document },
+      body: { doc: updatedFields },
     });
+    await this.elasticsearchService.indices.refresh({ index });
   }
 }

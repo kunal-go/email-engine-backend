@@ -68,13 +68,13 @@ export class MailMessageService {
   async updateMailMessage(
     accountId: string,
     mailMessage: MailMessageEntity,
-    payload: PayloadShape<MailMessageEntity>,
+    updateFields: Partial<PayloadShape<MailMessageEntity>>,
   ) {
     const index = this.getMailMessageIndexName(accountId);
     return await this.elasticSearchProvider.updateDocument<MailMessageEntity>(
       index,
       mailMessage.id,
-      payload,
+      updateFields,
     );
   }
 
@@ -162,6 +162,94 @@ export class MailMessageService {
           mailFolder.id,
           externalDeltaMailMessage.id,
         );
+
+        if (mailMessage) {
+          const payload: Partial<PayloadShape<MailMessageEntity>> = {};
+          if (externalDeltaMailMessage.createdDateTime !== undefined) {
+            payload.createdDateTime = new Date(
+              externalDeltaMailMessage.createdDateTime,
+            ).getTime();
+          }
+          if (externalDeltaMailMessage.lastModifiedDateTime !== undefined) {
+            payload.lastModifiedDateTime = new Date(
+              externalDeltaMailMessage.lastModifiedDateTime,
+            ).getTime();
+          }
+          if (externalDeltaMailMessage.receivedDateTime !== undefined) {
+            payload.receivedDateTime = new Date(
+              externalDeltaMailMessage.receivedDateTime,
+            ).getTime();
+          }
+          if (externalDeltaMailMessage.sentDateTime !== undefined) {
+            payload.sentDateTime = new Date(
+              externalDeltaMailMessage.sentDateTime,
+            ).getTime();
+          }
+          if (externalDeltaMailMessage.hasAttachments !== undefined) {
+            payload.hasAttachments = externalDeltaMailMessage.hasAttachments;
+          }
+          if (externalDeltaMailMessage.internetMessageId !== undefined) {
+            payload.internetMessageId =
+              externalDeltaMailMessage.internetMessageId;
+          }
+          if (externalDeltaMailMessage.subject !== undefined) {
+            payload.subject = externalDeltaMailMessage.subject;
+          }
+          if (externalDeltaMailMessage.bodyPreview !== undefined) {
+            payload.bodyPreview = externalDeltaMailMessage.bodyPreview;
+          }
+          if (externalDeltaMailMessage.conversationId !== undefined) {
+            payload.conversationId = externalDeltaMailMessage.conversationId;
+          }
+          if (externalDeltaMailMessage.isRead !== undefined) {
+            payload.isRead = externalDeltaMailMessage.isRead;
+          }
+          if (externalDeltaMailMessage.isDraft !== undefined) {
+            payload.isDraft = externalDeltaMailMessage.isDraft;
+          }
+          if (externalDeltaMailMessage.webLink !== undefined) {
+            payload.webLink = externalDeltaMailMessage.webLink;
+          }
+          if (externalDeltaMailMessage.body !== undefined) {
+            payload.body = externalDeltaMailMessage.body;
+          }
+          if (externalDeltaMailMessage.sender !== undefined) {
+            payload.sender = externalDeltaMailMessage.sender.emailAddress;
+          }
+          if (externalDeltaMailMessage.from !== undefined) {
+            payload.from = externalDeltaMailMessage.from.emailAddress;
+          }
+          if (externalDeltaMailMessage.toRecipients !== undefined) {
+            payload.toRecipients = externalDeltaMailMessage.toRecipients.map(
+              (el) => el.emailAddress,
+            );
+          }
+          if (externalDeltaMailMessage.ccRecipients !== undefined) {
+            payload.ccRecipients = externalDeltaMailMessage.ccRecipients.map(
+              (el) => el.emailAddress,
+            );
+          }
+          if (externalDeltaMailMessage.bccRecipients !== undefined) {
+            payload.bccRecipients = externalDeltaMailMessage.bccRecipients.map(
+              (el) => el.emailAddress,
+            );
+          }
+          if (externalDeltaMailMessage.replyTo !== undefined) {
+            payload.replyTo = externalDeltaMailMessage.replyTo.map(
+              (el) => el.emailAddress,
+            );
+          }
+          if (externalDeltaMailMessage.flag !== undefined) {
+            payload.isFlagged =
+              externalDeltaMailMessage.flag.flagStatus === 'flagged';
+          }
+          payload.lastSyncedAt = Date.now();
+
+          await this.updateMailMessage(mailFolder.id, mailMessage, payload);
+          updatedItemCount++;
+          continue;
+        }
+
         const payload: PayloadShape<MailMessageEntity> = {
           externalId: externalDeltaMailMessage.id,
           createdDateTime: new Date(
@@ -202,12 +290,6 @@ export class MailMessageService {
           isFlagged: externalDeltaMailMessage.flag.flagStatus === 'flagged',
           lastSyncedAt: Date.now(),
         };
-
-        if (mailMessage) {
-          await this.updateMailMessage(mailFolder.id, mailMessage, payload);
-          updatedItemCount++;
-          continue;
-        }
         await this.createMailMessage(mailFolder.id, payload);
         createdItemCount++;
       }
