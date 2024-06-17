@@ -23,9 +23,10 @@ export class MailFolderController {
     }
 
     const mailFolders = await this.mailFolderService.listMailFolders(accountId);
+    const sortedMailFolders = this.sortMailFolders(mailFolders.list);
     return {
       count: mailFolders.count,
-      list: mailFolders.list.map((el) => ({
+      list: sortedMailFolders.map((el) => ({
         id: el.id,
         externalId: el.externalId,
         name: el.name,
@@ -35,5 +36,35 @@ export class MailFolderController {
         lastSyncedAt: el.lastSyncedAt,
       })),
     };
+  }
+
+  private sortMailFolders(mailFolders: any[]) {
+    // Only microsoft account folders as of now
+    const folderNameSequence = [
+      'Inbox',
+      'Drafts',
+      'Sent Items',
+      'Outbox',
+      'Junk Email',
+      'Archive',
+      'Deleted Items',
+    ];
+
+    const sortedMailFolders = mailFolders.sort((a, b) => {
+      const aIndex = folderNameSequence.indexOf(a.name);
+      const bIndex = folderNameSequence.indexOf(b.name);
+      if (aIndex === -1 && bIndex === -1) {
+        return a.name.localeCompare(b.name);
+      }
+      if (aIndex === -1) {
+        return 1;
+      }
+      if (bIndex === -1) {
+        return -1;
+      }
+      return aIndex - bIndex;
+    });
+
+    return sortedMailFolders;
   }
 }
