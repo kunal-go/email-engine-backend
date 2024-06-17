@@ -108,7 +108,10 @@ export class MsGraphApiProviderService {
       return { accessToken, refreshToken };
     } catch (err) {
       if (err instanceof AxiosError) {
-        console.log('Axios error while creating tokens', err.message);
+        console.log(
+          'Axios error while creating tokens',
+          err.response?.data?.error,
+        );
         throw new UnprocessableEntityException(
           'Something while linking account with Microsoft',
         );

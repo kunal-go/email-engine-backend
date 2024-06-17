@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ElasticSearchProviderModule } from '../../providers/elastic-search-provider/elastic-search-provider.module';
 import { MsGraphApiProviderModule } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.module';
 import { AccountModule } from '../account/account.module';
@@ -9,9 +9,9 @@ import { MailFolderService } from './mail-folder.service';
 @Module({
   imports: [
     UserModule,
-    AccountModule,
+    forwardRef(() => AccountModule),
     ElasticSearchProviderModule,
-    MsGraphApiProviderModule,
+    forwardRef(() => MsGraphApiProviderModule),
   ],
   controllers: [MailFolderController],
   providers: [MailFolderService],

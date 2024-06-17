@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
 import { MsGraphApiProviderService } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.service';
+import { MailFolderService } from '../mail-folder/mail-folder.service';
 import { UserService } from '../user/user.service';
 import { AccountEntity, AccountType } from './types';
 
@@ -16,6 +17,8 @@ export class AccountService {
     @Inject(forwardRef(() => MsGraphApiProviderService))
     private readonly msGraphApiProvider: MsGraphApiProviderService,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => MailFolderService))
+    private readonly mailFolderService: MailFolderService,
   ) {}
 
   async createAccountWithMicrosoftAuth(payload: {
@@ -99,6 +102,20 @@ export class AccountService {
       return null;
     }
     return accounts.list[0];
+  }
+
+  async deleteAccount(userId: string, accountId: string) {
+    const account = await this.getAccountById(userId, accountId);
+    if (!account) {
+      throw new UnprocessableEntityException('Account not found');
+    }
+
+    const mailFolders = await this.mailFolderService.listMailFolders(accountId);
+    for (const mailFolder of mailFolders.list) {
+      await this.mailFolderService.deleteMailFolder(accountId, mailFolder.id);
+    }
+
+    await this.elasticSearchProvider.deleteDocument(account.index, account.id);
   }
 
   async listAccounts(userId: string) {

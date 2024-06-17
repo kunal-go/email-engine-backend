@@ -4,10 +4,12 @@ import { MsGraphApiProviderModule } from '../../providers/ms-graph-api-provider/
 import { UserModule } from '../user/user.module';
 import { AccountController } from './account.controller';
 import { AccountService } from './account.service';
+import { MailFolderModule } from '../mail-folder/mail-folder.module';
 
 @Module({
   imports: [
     forwardRef(() => MsGraphApiProviderModule),
+    forwardRef(() => MailFolderModule),
     UserModule,
     ElasticSearchProviderModule,
   ],

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -45,6 +46,11 @@ export class AccountController {
       userId,
       authorizationCode: input.authorizationCode,
     });
+
+    this.eventEmitter.emit(SYNC_ACCOUNT_DATA_EVENT, {
+      userId,
+      accountId: createdId,
+    });
     return { createdId };
   }
 
@@ -72,6 +78,7 @@ export class AccountController {
     if (!account) {
       throw new UnprocessableEntityException('Account not found');
     }
+
     return {
       id: account.id,
       type: account.type,
@@ -95,5 +102,15 @@ export class AccountController {
 
     this.eventEmitter.emit(SYNC_ACCOUNT_DATA_EVENT, { userId, accountId });
     return { message: 'Data syncing process started.' };
+  }
+
+  @Delete(':accountId')
+  async deleteAccount(
+    @Req() req: Request,
+    @Param('accountId') accountId: string,
+  ) {
+    const { userId } = authorizeRequest(req);
+    await this.accountService.deleteAccount(userId, accountId);
+    return { message: 'Account deleted' };
   }
 }

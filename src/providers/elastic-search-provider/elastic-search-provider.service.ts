@@ -73,6 +73,9 @@ export class ElasticSearchProviderService {
   }
 
   async deleteIndex(index: string) {
-    await this.elasticsearchService.indices.delete({ index });
+    await this.elasticsearchService.indices.delete({
+      index,
+      ignore_unavailable: true,
+    });
   }
 }

@@ -1,4 +1,9 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  UnprocessableEntityException,
+  forwardRef,
+} from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
   SYNC_ACCOUNT_DATA_EVENT,
@@ -14,7 +19,9 @@ import { MailFolderEntity } from './types';
 export class MailFolderService {
   constructor(
     private readonly elasticSearchProvider: ElasticSearchProviderService,
+    @Inject(forwardRef(() => MsGraphApiProviderService))
     private readonly msGraphApiProvider: MsGraphApiProviderService,
+    @Inject(forwardRef(() => AccountService))
     private readonly accountService: AccountService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -90,12 +97,14 @@ export class MailFolderService {
     );
   }
 
-  async deleteMailFolder(accountId: string, id: string) {
+  async deleteMailFolder(accountId: string, mailFolderId: string) {
     // Delete all mail messages in this mail folder
-    await this.elasticSearchProvider.deleteIndex('mail-message__' + id);
+    await this.elasticSearchProvider.deleteIndex(
+      'mail-message__' + mailFolderId,
+    );
 
     const index = this.getMailFolderIndexName(accountId);
-    await this.elasticSearchProvider.deleteDocument(index, id);
+    await this.elasticSearchProvider.deleteDocument(index, mailFolderId);
   }
 
   @OnEvent(SYNC_ACCOUNT_DATA_EVENT)
