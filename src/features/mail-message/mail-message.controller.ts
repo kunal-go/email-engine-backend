@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
 import { AccountService } from '../account/account.service';
@@ -18,7 +18,14 @@ export class MailMessageController {
     @Req() req: Request,
     @Param('accountId') accountId: string,
     @Param('mailFolderId') mailFolderId: string,
+    @Query('page') page: string,
+    @Query('size') size: string,
   ) {
+    const paginate = {
+      page: parseInt(page) || 1,
+      size: parseInt(size) || 10,
+    };
+
     const { userId } = authorizeRequest(req);
     const account = await this.accountService.getAccountById(userId, accountId);
     const mailFolder = await this.mailFolderService.getMailFolderById(
@@ -29,8 +36,10 @@ export class MailMessageController {
       return { count: 0, list: [] };
     }
 
-    const mailMessages =
-      await this.mailMessageService.listMailMessages(mailFolderId);
+    const mailMessages = await this.mailMessageService.listMailMessages(
+      mailFolderId,
+      paginate,
+    );
     return {
       count: mailMessages.count,
       list: mailMessages.list.map((el) => ({

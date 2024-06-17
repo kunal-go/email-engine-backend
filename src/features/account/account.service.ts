@@ -66,8 +66,7 @@ export class AccountService {
     const accounts =
       await this.elasticSearchProvider.listDocuments<AccountEntity>(
         AccountEntity,
-        index,
-        { match: { email } },
+        { index, query: { match: { email } } },
       );
     if (accounts.count === 0) {
       return null;
@@ -81,8 +80,7 @@ export class AccountService {
     const accounts =
       await this.elasticSearchProvider.listDocuments<AccountEntity>(
         AccountEntity,
-        index,
-        { match: { accessToken } },
+        { index, query: { match: { accessToken } } },
       );
     if (accounts.count === 0) {
       return null;
@@ -95,8 +93,7 @@ export class AccountService {
     const index = this.getAccountIndexName(userId);
     const accounts = await this.elasticSearchProvider.listDocuments(
       AccountEntity,
-      index,
-      { ids: { values: [accountId] } },
+      { index, query: { ids: { values: [accountId] } } },
     );
     if (accounts.count === 0) {
       return null;
@@ -120,7 +117,9 @@ export class AccountService {
 
   async listAccounts(userId: string) {
     const index = this.getAccountIndexName(userId);
-    return await this.elasticSearchProvider.listDocuments(AccountEntity, index);
+    return await this.elasticSearchProvider.listDocuments(AccountEntity, {
+      index,
+    });
   }
 
   async updateAccountTokens(

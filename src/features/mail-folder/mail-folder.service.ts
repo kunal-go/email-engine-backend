@@ -34,8 +34,7 @@ export class MailFolderService {
     const index = this.getMailFolderIndexName(accountId);
     const mailFolder = await this.elasticSearchProvider.listDocuments(
       MailFolderEntity,
-      index,
-      { ids: { values: [id] } },
+      { index, query: { ids: { values: [id] } } },
     );
     if (mailFolder.count === 0) {
       return null;
@@ -47,10 +46,7 @@ export class MailFolderService {
     const index = this.getMailFolderIndexName(accountId);
     const mailFolder = await this.elasticSearchProvider.listDocuments(
       MailFolderEntity,
-      index,
-      {
-        match: { externalId },
-      },
+      { index, query: { match: { externalId } } },
     );
     if (mailFolder.count === 0) {
       return null;
@@ -60,10 +56,9 @@ export class MailFolderService {
 
   async listMailFolders(accountId: string) {
     const index = this.getMailFolderIndexName(accountId);
-    return await this.elasticSearchProvider.listDocuments(
-      MailFolderEntity,
+    return await this.elasticSearchProvider.listDocuments(MailFolderEntity, {
       index,
-    );
+    });
   }
 
   async createMailFolder(

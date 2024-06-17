@@ -29,13 +29,31 @@ export class ElasticSearchProviderService {
 
   async listDocuments<T extends BaseEntity>(
     Entity: new (...args: any[]) => T,
-    index: string,
-    query?: any,
+    {
+      index,
+      paginate,
+      query,
+      sort,
+    }: {
+      index: string;
+      query?: any;
+      sort?: any;
+      paginate?: { page: number; size: number };
+    },
   ): Promise<{ count: number; list: T[] }> {
     try {
       const [count, documents] = await Promise.all([
         this.elasticsearchService.count({ index, body: { query } }),
-        this.elasticsearchService.search({ index, body: { query } }),
+        this.elasticsearchService.search({
+          index,
+          body: { query, sort },
+          ...(paginate
+            ? {
+                from: (paginate.page - 1) * paginate.size,
+                size: paginate.size,
+              }
+            : {}),
+        }),
       ]);
 
       return {
@@ -48,6 +66,7 @@ export class ElasticSearchProviderService {
       if (err.meta.statusCode === 404) {
         return { count: 0, list: [] };
       }
+      // console.log(err);
       throw new UnprocessableEntityException(
         'Error while listing documents from elastic search',
       );

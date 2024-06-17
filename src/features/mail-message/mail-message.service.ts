@@ -27,8 +27,7 @@ export class MailMessageService {
     const index = this.getMailMessageIndexName(mailFolderId);
     const mailMessages = await this.elasticSearchProvider.listDocuments(
       MailMessageEntity,
-      index,
-      { match: { externalId } },
+      { index, query: { match: { externalId } } },
     );
     if (mailMessages.count === 0) {
       return null;
@@ -36,12 +35,16 @@ export class MailMessageService {
     return mailMessages.list[0];
   }
 
-  async listMailMessages(mailFolderId: string) {
+  async listMailMessages(
+    mailFolderId: string,
+    paginate: { page: number; size: number },
+  ) {
     const index = this.getMailMessageIndexName(mailFolderId);
-    return await this.elasticSearchProvider.listDocuments(
-      MailMessageEntity,
+    return await this.elasticSearchProvider.listDocuments(MailMessageEntity, {
       index,
-    );
+      paginate,
+      sort: [{ createdDateTime: { order: 'desc' } }],
+    });
   }
 
   async createMailMessage(
