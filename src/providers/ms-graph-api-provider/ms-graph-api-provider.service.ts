@@ -65,8 +65,10 @@ export class MsGraphApiProviderService {
       }
 
       if (payload.actionMessage) {
-        console.log(err.response?.data);
-        console.log('Axios error while ' + payload.actionMessage, err.message);
+        console.log(
+          'Axios error while ' + payload.actionMessage,
+          err.response?.data.error,
+        );
         throw new UnprocessableEntityException(
           `Got error while ${payload.actionMessage} from microsoft`,
         );
@@ -108,6 +110,7 @@ export class MsGraphApiProviderService {
       return { accessToken, refreshToken };
     } catch (err) {
       if (err instanceof AxiosError) {
+        console.log(err.response?.data);
         console.log(
           'Axios error while creating tokens',
           err.response?.data?.error,
@@ -149,7 +152,10 @@ export class MsGraphApiProviderService {
       return { accessToken, refreshToken: newRefreshToken };
     } catch (err) {
       if (err instanceof AxiosError) {
-        console.log('Axios error while creating tokens', err.message);
+        console.log(
+          'Axios error while creating tokens',
+          err.response?.data.error,
+        );
         throw new UnprocessableEntityException(
           'Something while linking account with Microsoft',
         );

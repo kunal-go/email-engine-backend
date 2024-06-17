@@ -91,6 +91,7 @@ export class MailMessageService {
     userId: string;
     accountId: string;
   }) {
+    console.log('Mail messages syncing started for account.');
     try {
       const account = await this.accountService.getAccountById(
         userId,

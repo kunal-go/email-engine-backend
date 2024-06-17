@@ -77,5 +77,6 @@ export class ElasticSearchProviderService {
       index,
       ignore_unavailable: true,
     });
+    await this.elasticsearchService.indices.refresh({ index });
   }
 }
