@@ -171,18 +171,24 @@ export class MailFolderService {
       }
       const removedItemCount = localMailFoldersToDeleteIds.length;
 
-      console.log(
-        `Mail folders sync completed: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
-      );
+      const hasAnyChanges =
+        createdItemCount > 0 || updatedItemCount > 0 || removedItemCount > 0;
+      if (hasAnyChanges) {
+        console.log(
+          `Mail folders sync completed: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
+        );
+        this.eventEmitter.emit(USER_SSE_RESPONSE + account.userId, {
+          action: 'invalidate',
+          type: 'mail-folder-list',
+          payload: { accountId: account.id },
+        });
+      } else {
+        console.log(`Mail folders sync completed: no changes applied.`);
+      }
 
       this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_MESSAGES, {
         userId,
         accountId,
-      });
-      this.eventEmitter.emit(USER_SSE_RESPONSE + account.userId, {
-        action: 'invalidate',
-        type: 'mail-folder-list',
-        payload: { accountId: account.id },
       });
     } catch (err) {
       console.log('Error while syncing mail folders:', err.message);

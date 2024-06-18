@@ -313,9 +313,27 @@ export class MailMessageService {
         mailFolder,
       );
 
-      console.log(
-        `Messages synced in chunk of folder ${mailFolder.name}: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
-      );
+      const hasAnyChanges =
+        createdItemCount > 0 || updatedItemCount > 0 || removedItemCount > 0;
+      if (hasAnyChanges) {
+        console.log(
+          `Messages synced in chunk of folder ${mailFolder.name}: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
+        );
+        this.emitter.emit(USER_SSE_RESPONSE + account.userId, {
+          action: 'invalidate',
+          type: 'mail-message-list',
+          payload: { mailFolderId: mailFolder.id },
+        });
+        this.emitter.emit(USER_SSE_RESPONSE + account.userId, {
+          action: 'invalidate',
+          type: 'mail-folder-list',
+          payload: { accountId: account.id },
+        });
+      } else {
+        console.log(
+          `Messages synced in chunk of folder ${mailFolder.name}: No changes found.`,
+        );
+      }
 
       if (mailFolder.skipToken) {
         await this.syncExternalMailMessagesInChunkIntoLocal({
@@ -323,16 +341,6 @@ export class MailMessageService {
           mailFolder,
         });
       }
-      this.emitter.emit(USER_SSE_RESPONSE + account.userId, {
-        action: 'invalidate',
-        type: 'mail-message-list',
-        payload: { mailFolderId: mailFolder.id },
-      });
-      this.emitter.emit(USER_SSE_RESPONSE + account.userId, {
-        action: 'invalidate',
-        type: 'mail-folder-list',
-        payload: { accountId: account.id },
-      });
     } catch (err) {
       console.log(
         `Error while syncing mail messages of folder ${mailFolder.name}:`,
