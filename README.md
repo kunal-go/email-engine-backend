@@ -3,6 +3,8 @@
 This is the backend repository for the Email Engine Core. It is built using the [NestJS](https://nestjs.com/) framework with [Elasticsearch](https://www.elastic.co/) for the database. <br />
 Also checkout [Email Engine Core (Frontend) Repository](https://github.com/kunal-go/email-engine-frontend)
 
+![Email view](image.png)
+
 ## Features
 
 - Email client where you can link your multiple email accounts and view all your emails in one place.
