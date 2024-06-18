@@ -94,36 +94,32 @@ export class MailMessageService {
     userId: string;
     accountId: string;
   }) {
-    console.log('Mail messages syncing started for account.');
+    console.log('Started syncing messages of account', accountId);
     try {
       const account = await this.accountService.getAccountById(
         userId,
         accountId,
       );
       if (!account) {
-        console.log('Skipping mail messages sync as no account found.');
+        console.log('Skipping messages sync as no account found.');
         return;
       }
 
       const localMailFolders =
         await this.mailFolderService.listMailFolders(accountId);
+      if (localMailFolders.count === 0) {
+        console.log('Skipping messages sync as no folders found.');
+        return;
+      }
       for (const mailFolder of localMailFolders.list) {
-        console.log(
-          'Mail messages syncing started for folder:',
-          mailFolder.name,
-        );
+        console.log('Messages syncing started of folder:', mailFolder.name);
         await this.syncExternalMailMessagesInChunkIntoLocal({
           account,
           mailFolder,
         });
-        console.log(
-          'Mail messages syncing completed for folder:',
-          mailFolder.name,
-        );
+        console.log('Messages synced of folder:', mailFolder.name);
       }
-      console.log(
-        'All mail messages are synced for all mail folders of account.',
-      );
+      console.log('All mail messages are synced');
     } catch (err) {
       console.log(
         'Error while syncing messages for all mail folders:',
@@ -166,6 +162,8 @@ export class MailMessageService {
           mailFolder.id,
           externalDeltaMailMessage.id,
         );
+        console.log('externalDeltaMailMessage', externalDeltaMailMessage?.id);
+        console.log('mailMessage', mailMessage?.externalId);
 
         if (mailMessage) {
           const payload: Partial<PayloadShape<MailMessageEntity>> = {};
@@ -311,7 +309,7 @@ export class MailMessageService {
       );
 
       console.log(
-        `Mail messages chunk sync completed of folder ${mailFolder.name}: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
+        `Messages synced in chunk of folder ${mailFolder.name}: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
       );
 
       if (mailFolder.skipToken) {

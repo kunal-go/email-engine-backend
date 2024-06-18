@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
-  SYNC_ACCOUNT_DATA_EVENT,
+  SYNC_ACCOUNT_MAIL_FOLDERS,
   SYNC_ACCOUNT_MAIL_MESSAGES,
 } from '../../common/events';
 import { PayloadShape } from '../../common/types';
@@ -102,7 +102,7 @@ export class MailFolderService {
     await this.elasticSearchProvider.deleteDocument(index, mailFolderId);
   }
 
-  @OnEvent(SYNC_ACCOUNT_DATA_EVENT)
+  @OnEvent(SYNC_ACCOUNT_MAIL_FOLDERS)
   async syncExternalMailFoldersIntoLocal({
     accountId,
     userId,
@@ -111,14 +111,13 @@ export class MailFolderService {
     accountId: string;
   }) {
     try {
-      console.log('Syncing mail folders for account:', accountId);
+      console.log('Syncing mail folders of account:', accountId);
 
       const account = await this.accountService.getAccountById(
         userId,
         accountId,
       );
       if (!account) {
-        console.log('Syncing mail folders for account:', accountId);
         return;
       }
 
@@ -172,7 +171,7 @@ export class MailFolderService {
       const removedItemCount = localMailFoldersToDeleteIds.length;
 
       console.log(
-        `Mail folders sync completed: Created: ${createdItemCount}, Updated: ${updatedItemCount}, Removed: ${removedItemCount} mail folders.`,
+        `Mail folders sync completed: created: ${createdItemCount}, updated: ${updatedItemCount}, removed: ${removedItemCount} mail folders.`,
       );
 
       this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_MESSAGES, {

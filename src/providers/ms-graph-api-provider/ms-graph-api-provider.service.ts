@@ -110,7 +110,6 @@ export class MsGraphApiProviderService {
       return { accessToken, refreshToken };
     } catch (err) {
       if (err instanceof AxiosError) {
-        console.log(err.response?.data);
         console.log(
           'Axios error while creating tokens',
           err.response?.data?.error,

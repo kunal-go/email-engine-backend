@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
-import { SYNC_ACCOUNT_DATA_EVENT } from '../../common/events';
+import { SYNC_ACCOUNT_MAIL_FOLDERS } from '../../common/events';
 import { Configuration } from '../../configuration';
 import { AccountService } from './account.service';
 import { LinkMicrosoftAccountInput } from './inputs/link-microsoft-account.input';
@@ -47,7 +47,7 @@ export class AccountController {
       authorizationCode: input.authorizationCode,
     });
 
-    this.eventEmitter.emit(SYNC_ACCOUNT_DATA_EVENT, {
+    this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_FOLDERS, {
       userId,
       accountId: createdId,
     });
@@ -100,7 +100,10 @@ export class AccountController {
       throw new UnprocessableEntityException('Account not found');
     }
 
-    this.eventEmitter.emit(SYNC_ACCOUNT_DATA_EVENT, { userId, accountId });
+    this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_FOLDERS, {
+      userId,
+      accountId,
+    });
     return { message: 'Data syncing process started.' };
   }
 

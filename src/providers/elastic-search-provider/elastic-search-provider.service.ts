@@ -19,6 +19,7 @@ export class ElasticSearchProviderService {
         index,
         body: document,
       });
+      await this.elasticsearchService.indices.refresh({ index });
       return createdDocument.body._id;
     } catch (err) {
       throw new UnprocessableEntityException(
@@ -66,7 +67,6 @@ export class ElasticSearchProviderService {
       if (err.meta.statusCode === 404) {
         return { count: 0, list: [] };
       }
-      // console.log(err);
       throw new UnprocessableEntityException(
         'Error while listing documents from elastic search',
       );
@@ -96,6 +96,5 @@ export class ElasticSearchProviderService {
       index,
       ignore_unavailable: true,
     });
-    await this.elasticsearchService.indices.refresh({ index });
   }
 }
