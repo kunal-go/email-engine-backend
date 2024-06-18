@@ -8,7 +8,13 @@ Also checkout [Email Engine Core (Frontend) Repository](https://github.com/kunal
 ## Features
 
 - Email client where you can link your multiple email accounts and view all your emails in one place.
-- Right now, only Microsoft Outlook is supported.
+- Right now, only Microsoft Outlook is supported with Microsoft OAuth2.0 authentication.
+- Leveraging Microsoft Graph API to fetch email data.
+- Elasticsearch is used as the local database to store email data.
+
+## Limitations
+
+- To link account through Microsoft OAuth2.0, you need to have a active Microsoft Office 365 subscription.
 
 ## Setup and Installation
 
