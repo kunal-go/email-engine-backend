@@ -22,7 +22,7 @@ export class AccountController {
   constructor(
     private readonly config: ConfigService<Configuration>,
     private readonly accountService: AccountService,
-    private eventEmitter: EventEmitter2,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Get('/microsoft-auth/url')

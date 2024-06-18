@@ -8,6 +8,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
   SYNC_ACCOUNT_MAIL_FOLDERS,
   SYNC_ACCOUNT_MAIL_MESSAGES,
+  USER_SSE_RESPONSE,
 } from '../../common/events';
 import { PayloadShape } from '../../common/types';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
@@ -177,6 +178,11 @@ export class MailFolderService {
       this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_MESSAGES, {
         userId,
         accountId,
+      });
+      this.eventEmitter.emit(USER_SSE_RESPONSE + account.userId, {
+        action: 'invalidate',
+        type: 'mail-folder-list',
+        payload: { accountId: account.id },
       });
     } catch (err) {
       console.log('Error while syncing mail folders:', err.message);

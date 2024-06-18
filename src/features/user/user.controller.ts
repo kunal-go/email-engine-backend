@@ -3,19 +3,30 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
+  Sse,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
-import { createAccessToken } from '../../common/auth/access-token';
+import { Observable, map } from 'rxjs';
+import {
+  createAccessToken,
+  validateAccessToken,
+} from '../../common/auth/access-token';
 import { authorizeRequest } from '../../common/auth/authorization';
+import { USER_SSE_RESPONSE } from '../../common/events';
 import { createHash, verifyHash } from '../../common/utils/hashing';
 import { RegisterUserInput } from './inputs/register-user.input';
 import { UserService } from './user.service';
 
 @Controller('/user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   @Post('/register')
   async registerUser(@Body() input: RegisterUserInput) {
@@ -70,5 +81,16 @@ export class UserController {
         createdAt: el.createdAt,
       })),
     };
+  }
+
+  @Sse('sse')
+  async accountSse(@Query('accessToken') accessToken: string) {
+    const { userId } = validateAccessToken(accessToken);
+    const observable = new Observable((subscribe) => {
+      this.eventEmitter.on(USER_SSE_RESPONSE + userId, (data) => {
+        subscribe.next(data);
+      });
+    });
+    return observable.pipe(map((data) => ({ data })));
   }
 }

@@ -1,6 +1,9 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
-import { SYNC_ACCOUNT_MAIL_MESSAGES } from '../../common/events';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import {
+  SYNC_ACCOUNT_MAIL_MESSAGES,
+  USER_SSE_RESPONSE,
+} from '../../common/events';
 import { PayloadShape } from '../../common/types';
 import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
 import { MsGraphApiProviderService } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.service';
@@ -17,6 +20,7 @@ export class MailMessageService {
     private readonly msGraphApiProvider: MsGraphApiProviderService,
     private readonly mailFolderService: MailFolderService,
     private readonly accountService: AccountService,
+    private readonly emitter: EventEmitter2,
   ) {}
 
   private getMailMessageIndexName(mailFolderId: string) {
@@ -119,6 +123,7 @@ export class MailMessageService {
         });
         console.log('Messages synced of folder:', mailFolder.name);
       }
+
       console.log('All mail messages are synced');
     } catch (err) {
       console.log(
@@ -318,6 +323,16 @@ export class MailMessageService {
           mailFolder,
         });
       }
+      this.emitter.emit(USER_SSE_RESPONSE + account.userId, {
+        action: 'invalidate',
+        type: 'mail-message-list',
+        payload: { mailFolderId: mailFolder.id },
+      });
+      this.emitter.emit(USER_SSE_RESPONSE + account.userId, {
+        action: 'invalidate',
+        type: 'mail-folder-list',
+        payload: { accountId: account.id },
+      });
     } catch (err) {
       console.log(
         `Error while syncing mail messages of folder ${mailFolder.name}:`,
