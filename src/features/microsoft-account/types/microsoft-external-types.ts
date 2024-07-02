@@ -1,4 +1,4 @@
-export type MsGraphUser = {
+export type MicrosoftExternalUser = {
   businessPhones: string[];
   displayName: string;
   givenName: string;
@@ -12,7 +12,7 @@ export type MsGraphUser = {
   id: string;
 };
 
-export type MsGraphMailFolder = {
+export type MicrosoftExternalFolder = {
   id: string;
   displayName: string;
   parentFolderId: string;
@@ -23,14 +23,14 @@ export type MsGraphMailFolder = {
   isHidden: boolean;
 };
 
-type MsGraphMessageEmailObject = {
+type MicrosoftExternalEmailObject = {
   emailAddress: {
     name: string;
     address: string;
   };
 };
 
-export type MsGraphMessage = {
+export type MicrosoftExternalMessage = {
   id: string;
   createdDateTime: string;
   lastModifiedDateTime: string;
@@ -53,16 +53,16 @@ export type MsGraphMessage = {
   webLink: string;
   inferenceClassification: string;
   body: { contentType: string; content: string };
-  sender: MsGraphMessageEmailObject;
-  from: MsGraphMessageEmailObject;
-  toRecipients: MsGraphMessageEmailObject[];
-  ccRecipients: MsGraphMessageEmailObject[];
-  bccRecipients: MsGraphMessageEmailObject[];
-  replyTo: MsGraphMessageEmailObject[];
+  sender: MicrosoftExternalEmailObject;
+  from: MicrosoftExternalEmailObject;
+  toRecipients: MicrosoftExternalEmailObject[];
+  ccRecipients: MicrosoftExternalEmailObject[];
+  bccRecipients: MicrosoftExternalEmailObject[];
+  replyTo: MicrosoftExternalEmailObject[];
   flag: { flagStatus: 'flagged' | 'notFlagged' };
 };
 
-export type MsGraphRemovedMessage = {
+export type MicrosoftExternalRemovedMessage = {
   id: string;
   '@removed': { reason: string };
 };

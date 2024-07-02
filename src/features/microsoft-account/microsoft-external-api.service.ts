@@ -1,22 +1,28 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  UnprocessableEntityException,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import { Configuration } from '../../configuration';
-import { AccountService } from '../../features/account/account.service';
-import { AccountEntity } from '../../features/account/types';
-import { MailFolderEntity } from '../../features/mail-folder/types';
+import { AccountEntity, AccountType } from '../account/types';
+import { FolderEntity } from '../folder/types';
+import { MicrosoftAccountService } from './microsoft-account.service';
 import {
-  MsGraphMailFolder,
-  MsGraphMessage,
-  MsGraphRemovedMessage,
-  MsGraphUser,
+  MicrosoftExternalFolder,
+  MicrosoftExternalMessage,
+  MicrosoftExternalRemovedMessage,
+  MicrosoftExternalUser,
 } from './types';
 
 @Injectable()
-export class MsGraphApiProviderService {
+export class MicrosoftExternalApiService {
   constructor(
     private readonly config: ConfigService<Configuration>,
-    private readonly accountService: AccountService,
+    @Inject(forwardRef(() => MicrosoftAccountService))
+    private readonly microsoftAccountService: MicrosoftAccountService,
   ) {}
 
   async callApi(payload: {
@@ -27,10 +33,15 @@ export class MsGraphApiProviderService {
     headers?: Record<string, string>;
     actionMessage?: string;
   }) {
+    const metadata = payload.account?.metadata;
+    if (metadata?.type !== AccountType.Microsoft) {
+      throw new UnprocessableEntityException('Account type is not Microsoft');
+    }
+
     try {
       const headers = payload.headers || {};
-      if (payload.account?.accessToken) {
-        headers.Authorization = `Bearer ${payload.account?.accessToken}`;
+      if (metadata.accessToken) {
+        headers.Authorization = `Bearer ${metadata.accessToken}`;
       }
 
       const response = await axios({
@@ -49,17 +60,18 @@ export class MsGraphApiProviderService {
       if (code === 'InvalidAuthenticationToken') {
         if (payload.account) {
           console.log('Access token expired, refreshing tokens');
-          const tokens = await this.createTokensByRefreshToken(
-            payload.account.refreshToken,
+          const tokens = await this.createAuthTokensByRefreshToken(
+            metadata.refreshToken,
           );
-          await this.accountService.updateAccountTokens(
+          console.log('Tokens refreshed, updating account metadata');
+
+          await this.microsoftAccountService.updateMicrosoftAccountAuthTokens(
             payload.account,
             tokens,
           );
-          payload.account.accessToken = tokens.accessToken;
-          payload.account.refreshToken = tokens.refreshToken;
+          metadata.accessToken = tokens.accessToken;
+          metadata.refreshToken = tokens.refreshToken;
 
-          console.log('Tokens refreshed, updating account tokens');
           return await this.callApi(payload);
         }
       }
@@ -81,7 +93,7 @@ export class MsGraphApiProviderService {
     }
   }
 
-  async createTokens(
+  async createAuthTokensByCode(
     authorizationCode: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const tenantId = this.config.get('MS_GRAPH_TENANT_ID');
@@ -122,7 +134,7 @@ export class MsGraphApiProviderService {
     }
   }
 
-  async createTokensByRefreshToken(
+  async createAuthTokensByRefreshToken(
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const tenantId = this.config.get('MS_GRAPH_TENANT_ID');
@@ -163,7 +175,7 @@ export class MsGraphApiProviderService {
     }
   }
 
-  async getUser(accessToken: string): Promise<MsGraphUser> {
+  async fetchUser(accessToken: string): Promise<MicrosoftExternalUser> {
     try {
       const response = await axios.get(`https://graph.microsoft.com/v1.0/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -180,9 +192,9 @@ export class MsGraphApiProviderService {
     }
   }
 
-  async listMailFolders(payload: {
+  async fetchFolderList(payload: {
     account: AccountEntity;
-  }): Promise<MsGraphMailFolder[]> {
+  }): Promise<MicrosoftExternalFolder[]> {
     const response = await this.callApi({
       ...payload,
       method: 'get',
@@ -192,12 +204,12 @@ export class MsGraphApiProviderService {
     return response.value;
   }
 
-  async getDeltaMessages(payload: {
+  async fetchDeltaMessageList(payload: {
     account: AccountEntity;
-    mailFolder: MailFolderEntity;
+    mailFolder: FolderEntity;
   }): Promise<{
-    updatedList: MsGraphMessage[];
-    removedList: MsGraphRemovedMessage[];
+    updatedList: MicrosoftExternalMessage[];
+    removedList: MicrosoftExternalRemovedMessage[];
     deltaToken?: string;
     skipToken?: string;
   }> {
@@ -210,12 +222,13 @@ export class MsGraphApiProviderService {
     if (payload.mailFolder.skipToken) {
       url.searchParams.append('$skipToken', payload.mailFolder.skipToken);
     }
+    const MAX_PAGE_SIZE = '20';
 
     const response = await this.callApi({
       account: payload.account,
       method: 'get',
       url: url.toString(),
-      headers: { 'odata.maxpagesize': '20' },
+      headers: { 'odata.maxpagesize': MAX_PAGE_SIZE },
       actionMessage: 'fetching delta messages from mail folder',
     });
 

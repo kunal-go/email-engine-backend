@@ -1,7 +1,7 @@
 import { BaseEntity } from '../../common/base-entity';
 import { PayloadShape } from '../../common/types';
 
-export class MailFolderEntity extends BaseEntity {
+export class FolderEntity extends BaseEntity {
   externalId: string;
   name: string;
   parentFolderId: string;
@@ -19,7 +19,7 @@ export class MailFolderEntity extends BaseEntity {
     return this.index.split('__')[1];
   }
 
-  constructor(index: string, id: string, data: PayloadShape<MailFolderEntity>) {
+  constructor(index: string, id: string, data: PayloadShape<FolderEntity>) {
     super(id, index);
     this.externalId = data.externalId;
     this.name = data.name;

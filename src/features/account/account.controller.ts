@@ -10,28 +10,27 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
-import { SYNC_ACCOUNT_MAIL_FOLDERS } from '../../common/events';
+import { SYNC_ACCOUNT_FOLDERS_EVENT } from '../event/constants';
 import { AccountService } from './account.service';
 
 @Controller('/account')
 export class AccountController {
   constructor(
+    private readonly event: EventEmitter2,
     private readonly accountService: AccountService,
-    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Get()
-  async listAccounts(@Req() req: Request) {
+  async getAccountList(@Req() req: Request) {
     const { userId } = authorizeRequest(req);
     const accounts = await this.accountService.listAccounts(userId);
     return {
       count: accounts.count,
       list: accounts.list.map((el) => ({
         id: el.id,
-        type: el.type,
+        type: el.metadata.type,
         email: el.email,
         name: el.name,
-        label: el.label,
         createdAt: el.createdAt,
       })),
     };
@@ -47,10 +46,9 @@ export class AccountController {
 
     return {
       id: account.id,
-      type: account.type,
+      type: account.metadata.type,
       email: account.email,
       name: account.name,
-      label: account.label,
       createdAt: account.createdAt,
     };
   }
@@ -66,11 +64,8 @@ export class AccountController {
       throw new UnprocessableEntityException('Account not found');
     }
 
-    this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_FOLDERS, {
-      userId,
-      accountId,
-    });
-    return { message: 'Data syncing process started.' };
+    this.event.emit(SYNC_ACCOUNT_FOLDERS_EVENT, { userId, accountId });
+    return { message: 'Account data syncing process is started.' };
   }
 
   @Delete(':accountId')

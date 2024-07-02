@@ -2,17 +2,17 @@ import { Controller, Get, Param, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
 import { AccountService } from '../account/account.service';
-import { MailFolderService } from './mail-folder.service';
+import { FolderService } from './folder.service';
 
 @Controller('/account/:accountId/mail-folder')
-export class MailFolderController {
+export class FolderController {
   constructor(
     private readonly accountService: AccountService,
-    private readonly mailFolderService: MailFolderService,
+    private readonly folderService: FolderService,
   ) {}
 
   @Get()
-  async listMailFolders(
+  async getFolderList(
     @Req() req: Request,
     @Param('accountId') accountId: string,
   ) {
@@ -22,8 +22,8 @@ export class MailFolderController {
       return { count: 0, list: [] };
     }
 
-    const mailFolders = await this.mailFolderService.listMailFolders(accountId);
-    const sortedMailFolders = this.sortMailFolders(mailFolders.list);
+    const mailFolders = await this.folderService.getFolderList(accountId);
+    const sortedMailFolders = this.sortFolders(mailFolders.list);
     return {
       count: mailFolders.count,
       list: sortedMailFolders.map((el) => ({
@@ -38,7 +38,7 @@ export class MailFolderController {
     };
   }
 
-  private sortMailFolders(mailFolders: any[]) {
+  private sortFolders(mailFolders: any[]) {
     // Only microsoft account folders as of now
     const folderNameSequence = [
       'Inbox',

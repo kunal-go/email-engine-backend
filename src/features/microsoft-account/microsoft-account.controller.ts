@@ -1,19 +1,28 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
-import { SYNC_ACCOUNT_MAIL_FOLDERS } from '../../common/events';
 import { Configuration } from '../../configuration';
-import { AccountService } from './account.service';
+import { SYNC_ACCOUNT_FOLDERS_EVENT } from '../event/constants';
+import { UserService } from '../user/user.service';
 import { LinkMicrosoftAccountInput } from './inputs/link-microsoft-account.input';
+import { MicrosoftAccountService } from './microsoft-account.service';
 
 @Controller('/account/microsoft-auth')
-export class MicrosoftAuthController {
+export class MicrosoftAccountController {
   constructor(
     private readonly config: ConfigService<Configuration>,
-    private readonly accountService: AccountService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly userService: UserService,
+    private readonly microsoftAccountService: MicrosoftAccountService,
   ) {}
 
   @Get('/url')
@@ -32,13 +41,18 @@ export class MicrosoftAuthController {
     @Req() req: Request,
     @Body() input: LinkMicrosoftAccountInput,
   ) {
+    const { authorizationCode } = input;
     const { userId } = authorizeRequest(req);
-    const createdId = await this.accountService.createAccountWithMicrosoftAuth({
-      userId,
-      authorizationCode: input.authorizationCode,
-    });
+    const user = await this.userService.getUserById(userId);
+    if (!user) {
+      throw new UnprocessableEntityException('User does not exist');
+    }
 
-    this.eventEmitter.emit(SYNC_ACCOUNT_MAIL_FOLDERS, {
+    const createdId = await this.microsoftAccountService.linkMicrosoftAccount({
+      user,
+      authorizationCode,
+    });
+    this.eventEmitter.emit(SYNC_ACCOUNT_FOLDERS_EVENT, {
       userId,
       accountId: createdId,
     });

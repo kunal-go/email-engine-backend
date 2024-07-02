@@ -6,7 +6,7 @@ type MessageEmailObject = {
   address: string;
 };
 
-export class MailMessageEntity extends BaseEntity {
+export class MessageEntity extends BaseEntity {
   externalId: string;
   createdDateTime: number;
   lastModifiedDateTime: number;
@@ -34,11 +34,7 @@ export class MailMessageEntity extends BaseEntity {
     return this.index.split('__')[1];
   }
 
-  constructor(
-    index: string,
-    id: string,
-    data: PayloadShape<MailMessageEntity>,
-  ) {
+  constructor(index: string, id: string, data: PayloadShape<MessageEntity>) {
     super(id, index);
     this.externalId = data.externalId;
     this.createdDateTime = data.createdDateTime;

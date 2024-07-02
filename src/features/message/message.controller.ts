@@ -2,19 +2,19 @@ import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { authorizeRequest } from '../../common/auth/authorization';
 import { AccountService } from '../account/account.service';
-import { MailFolderService } from '../mail-folder/mail-folder.service';
-import { MailMessageService } from './mail-message.service';
+import { FolderService } from '../folder/folder.service';
+import { MessageService } from './message.service';
 
 @Controller('/account/:accountId/mail-folder/:mailFolderId/message')
-export class MailMessageController {
+export class MessageController {
   constructor(
     private readonly accountService: AccountService,
-    private readonly mailFolderService: MailFolderService,
-    private readonly mailMessageService: MailMessageService,
+    private readonly folderService: FolderService,
+    private readonly messageService: MessageService,
   ) {}
 
   @Get()
-  async listMailMessages(
+  async getMessageList(
     @Req() req: Request,
     @Param('accountId') accountId: string,
     @Param('mailFolderId') mailFolderId: string,
@@ -28,7 +28,7 @@ export class MailMessageController {
 
     const { userId } = authorizeRequest(req);
     const account = await this.accountService.getAccountById(userId, accountId);
-    const mailFolder = await this.mailFolderService.getMailFolderById(
+    const mailFolder = await this.folderService.getFolderById(
       accountId,
       mailFolderId,
     );
@@ -36,7 +36,7 @@ export class MailMessageController {
       return { count: 0, list: [] };
     }
 
-    const mailMessages = await this.mailMessageService.listMailMessages(
+    const mailMessages = await this.messageService.getMessageList(
       mailFolderId,
       paginate,
     );

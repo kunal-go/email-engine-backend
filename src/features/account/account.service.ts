@@ -4,97 +4,60 @@ import {
   UnprocessableEntityException,
   forwardRef,
 } from '@nestjs/common';
-import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
-import { MsGraphApiProviderService } from '../../providers/ms-graph-api-provider/ms-graph-api-provider.service';
-import { MailFolderService } from '../mail-folder/mail-folder.service';
-import { UserService } from '../user/user.service';
-import { AccountEntity, AccountType } from './types';
+import { PayloadShape } from '../../common/types';
+import { DatabaseService } from '../database/database.service';
+import { FolderService } from '../folder/folder.service';
+import { AccountEntity } from './types';
 
 @Injectable()
 export class AccountService {
   constructor(
-    private readonly elasticSearchProvider: ElasticSearchProviderService,
-    @Inject(forwardRef(() => MsGraphApiProviderService))
-    private readonly msGraphApiProvider: MsGraphApiProviderService,
-    private readonly userService: UserService,
-    @Inject(forwardRef(() => MailFolderService))
-    private readonly mailFolderService: MailFolderService,
+    private readonly database: DatabaseService,
+    @Inject(forwardRef(() => FolderService))
+    private readonly folderService: FolderService,
   ) {}
 
-  async createAccountWithMicrosoftAuth(payload: {
-    userId: string;
-    authorizationCode: string;
-  }) {
-    const user = await this.userService.getUserById(payload.userId);
-    if (!user) {
-      throw new UnprocessableEntityException('User does not exist');
-    }
+  getAccountIndexName(userId: string) {
+    return `account__${userId}`;
+  }
 
-    const { accessToken, refreshToken } =
-      await this.msGraphApiProvider.createTokens(payload.authorizationCode);
-    const microsoftUser = await this.msGraphApiProvider.getUser(accessToken);
-
-    const account = await this.getAccountByEmail(user.id, microsoftUser.mail);
+  async createAccount(userId: string, data: PayloadShape<AccountEntity>) {
+    const account = await this.getAccountByEmail(userId, data.email);
     if (account) {
       throw new UnprocessableEntityException(
         'Account already exists with this email',
       );
     }
 
-    const index = this.getAccountIndexName(user.id);
-    return await this.elasticSearchProvider.createDocument<AccountEntity>(
-      index,
-      {
-        type: AccountType.Microsoft,
-        createdAt: Date.now(),
-        email: microsoftUser.mail,
-        externalId: microsoftUser.id,
-        name: microsoftUser.displayName,
-        label: microsoftUser.mail,
-        accessToken,
-        refreshToken,
-      },
-    );
-  }
-
-  private getAccountIndexName(userId: string) {
-    return `account__${userId}`;
+    const index = this.getAccountIndexName(userId);
+    return await this.database.createDocument<AccountEntity>(index, data);
   }
 
   async getAccountByEmail(userId: string, email: string) {
     const index = this.getAccountIndexName(userId);
-    const accounts =
-      await this.elasticSearchProvider.listDocuments<AccountEntity>(
-        AccountEntity,
-        { index, query: { match: { email } } },
-      );
+    const accounts = await this.database.getDocumentList(AccountEntity, {
+      index,
+      query: { match: { email } },
+    });
     if (accounts.count === 0) {
       return null;
     }
 
-    return accounts.list[0];
-  }
-
-  async getAccountByAccessToken(userId: string, accessToken: string) {
-    const index = this.getAccountIndexName(userId);
-    const accounts =
-      await this.elasticSearchProvider.listDocuments<AccountEntity>(
-        AccountEntity,
-        { index, query: { match: { accessToken } } },
-      );
-    if (accounts.count === 0) {
-      return null;
-    }
+    // for (const account of accounts.list) {
+    //   if (account.metadata.type === AccountType.Microsoft) {
+    //     account.metadata.refreshToken
+    //   }
+    // }
 
     return accounts.list[0];
   }
 
   async getAccountById(userId: string, accountId: string) {
     const index = this.getAccountIndexName(userId);
-    const accounts = await this.elasticSearchProvider.listDocuments(
-      AccountEntity,
-      { index, query: { ids: { values: [accountId] } } },
-    );
+    const accounts = await this.database.getDocumentList(AccountEntity, {
+      index,
+      query: { ids: { values: [accountId] } },
+    });
     if (accounts.count === 0) {
       return null;
     }
@@ -107,29 +70,29 @@ export class AccountService {
       throw new UnprocessableEntityException('Account not found');
     }
 
-    const mailFolders = await this.mailFolderService.listMailFolders(accountId);
+    const mailFolders = await this.folderService.getFolderList(accountId);
     for (const mailFolder of mailFolders.list) {
-      await this.mailFolderService.deleteMailFolder(accountId, mailFolder.id);
+      await this.folderService.deleteFolder(accountId, mailFolder.id);
     }
 
-    await this.elasticSearchProvider.deleteDocument(account.index, account.id);
+    await this.database.deleteDocument(account.index, account.id);
   }
 
   async listAccounts(userId: string) {
     const index = this.getAccountIndexName(userId);
-    return await this.elasticSearchProvider.listDocuments(AccountEntity, {
+    return await this.database.getDocumentList(AccountEntity, {
       index,
     });
   }
 
-  async updateAccountTokens(
+  async overwriteAccountMetadata(
     account: AccountEntity,
-    tokens: { accessToken: string; refreshToken: string },
+    metadata: AccountEntity['metadata'],
   ) {
-    await this.elasticSearchProvider.updateDocument<AccountEntity>(
+    await this.database.updateDocument<AccountEntity>(
       account.index,
       account.id,
-      { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+      { metadata },
     );
   }
 }

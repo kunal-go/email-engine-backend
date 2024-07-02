@@ -16,8 +16,8 @@ import {
   validateAccessToken,
 } from '../../common/auth/access-token';
 import { authorizeRequest } from '../../common/auth/authorization';
-import { USER_SSE_RESPONSE } from '../../common/events';
 import { createHash, verifyHash } from '../../common/utils/hashing';
+import { USER_SSE_RESPONSE } from '../event/constants';
 import { RegisterUserInput } from './inputs/register-user.input';
 import { UserService } from './user.service';
 
@@ -70,7 +70,7 @@ export class UserController {
   }
 
   @Get()
-  async listUsers() {
+  async getUserList() {
     // TODO: Protect this endpoint with an admin check
     const users = await this.userService.listUsers();
     return {

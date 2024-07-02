@@ -5,7 +5,7 @@ import { BaseEntity } from '../../common/base-entity';
 import { PayloadShape } from '../../common/types';
 
 @Injectable()
-export class ElasticSearchProviderService {
+export class DatabaseService {
   constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
   async createDocument<T extends BaseEntity>(
@@ -28,7 +28,7 @@ export class ElasticSearchProviderService {
     }
   }
 
-  async listDocuments<T extends BaseEntity>(
+  async getDocumentList<T extends BaseEntity>(
     Entity: new (...args: any[]) => T,
     {
       index,

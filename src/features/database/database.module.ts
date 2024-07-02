@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { Configuration } from '../../configuration';
-import { ElasticSearchProviderService } from './elastic-search-provider.service';
+import { DatabaseService } from './database.service';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { ElasticSearchProviderService } from './elastic-search-provider.service'
         }) as any,
     }),
   ],
-  providers: [ElasticSearchProviderService],
-  exports: [ElasticSearchProviderService],
+  providers: [DatabaseService],
+  exports: [DatabaseService],
 })
-export class ElasticSearchProviderModule {}
+export class DatabaseModule {}

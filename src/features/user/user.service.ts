@@ -1,14 +1,12 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { ElasticSearchProviderService } from '../../providers/elastic-search-provider/elastic-search-provider.service';
+import { DatabaseService } from '../database/database.service';
 import { UserEntity } from './types';
 
 @Injectable()
 export class UserService {
   private indexName = 'user';
 
-  constructor(
-    private readonly elasticSearchProvider: ElasticSearchProviderService,
-  ) {}
+  constructor(private readonly database: DatabaseService) {}
 
   async createUser(payload: { username: string; hashedPassword: string }) {
     const existingUser = await this.getUserByUsername(payload.username);
@@ -18,18 +16,15 @@ export class UserService {
       );
     }
 
-    return await this.elasticSearchProvider.createDocument<UserEntity>(
-      this.indexName,
-      {
-        username: payload.username,
-        hashedPassword: payload.hashedPassword,
-        createdAt: Date.now(),
-      },
-    );
+    return await this.database.createDocument<UserEntity>(this.indexName, {
+      username: payload.username,
+      hashedPassword: payload.hashedPassword,
+      createdAt: Date.now(),
+    });
   }
 
   async getUserByUsername(username: string) {
-    const users = await this.elasticSearchProvider.listDocuments(UserEntity, {
+    const users = await this.database.getDocumentList(UserEntity, {
       index: this.indexName,
       query: { match: { username } },
     });
@@ -40,7 +35,7 @@ export class UserService {
   }
 
   async getUserById(id: string) {
-    const users = await this.elasticSearchProvider.listDocuments(UserEntity, {
+    const users = await this.database.getDocumentList(UserEntity, {
       index: this.indexName,
       query: { ids: { values: [id] } },
     });
@@ -51,7 +46,7 @@ export class UserService {
   }
 
   async listUsers() {
-    return await this.elasticSearchProvider.listDocuments(UserEntity, {
+    return await this.database.getDocumentList(UserEntity, {
       index: this.indexName,
     });
   }
