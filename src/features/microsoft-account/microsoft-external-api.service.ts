@@ -28,7 +28,7 @@ export class MicrosoftExternalApiService {
   async callApi(payload: {
     account?: AccountEntity;
     url: string;
-    method: 'get' | 'post' | 'put' | 'delete';
+    method: 'get' | 'post' | 'put' | 'delete' | 'patch';
     body?: any;
     headers?: Record<string, string>;
     actionMessage?: string;
@@ -39,7 +39,7 @@ export class MicrosoftExternalApiService {
     }
 
     try {
-      const headers = payload.headers || {};
+      const headers = payload.headers || { 'Content-Type': 'application/json' };
       if (metadata.accessToken) {
         headers.Authorization = `Bearer ${metadata.accessToken}`;
       }
@@ -240,5 +240,23 @@ export class MicrosoftExternalApiService {
     const removedList = response.value?.filter((el) => el['@removed']) || [];
     const updatedList = response.value?.filter((el) => !el['@removed']) || [];
     return { updatedList, removedList, deltaToken, skipToken };
+  }
+
+  async updateMessage(payload: {
+    account: AccountEntity;
+    externalFolderId: string;
+    externalMessageId: string;
+    update: { isRead?: boolean };
+  }) {
+    const url = new URL(
+      `https://graph.microsoft.com/v1.0/me/mailFolders/${payload.externalFolderId}/messages/${payload.externalMessageId}`,
+    );
+    await this.callApi({
+      account: payload.account,
+      method: 'patch',
+      url: url.toString(),
+      actionMessage: 'updating message',
+      body: payload.update,
+    });
   }
 }

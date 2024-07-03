@@ -7,27 +7,39 @@ import { MessageEntity } from './types';
 export class MessageService {
   constructor(private readonly database: DatabaseService) {}
 
-  private getMessageIndexName(mailFolderId: string) {
-    return `mail-message__${mailFolderId}`;
+  private getMessageIndexName(folderId: string) {
+    return `mail-message__${folderId}`;
   }
 
-  async getMessageByExternalId(mailFolderId: string, externalId: string) {
-    const index = this.getMessageIndexName(mailFolderId);
-    const mailMessages = await this.database.getDocumentList(MessageEntity, {
+  async getMessageById(folderId: string, id: string) {
+    const index = this.getMessageIndexName(folderId);
+    const message = await this.database.getDocumentList(MessageEntity, {
+      index,
+      query: { ids: { values: [id] } },
+    });
+    if (message.count === 0) {
+      return null;
+    }
+    return message.list[0];
+  }
+
+  async getMessageByExternalId(folderId: string, externalId: string) {
+    const index = this.getMessageIndexName(folderId);
+    const message = await this.database.getDocumentList(MessageEntity, {
       index,
       query: { match: { externalId } },
     });
-    if (mailMessages.count === 0) {
+    if (message.count === 0) {
       return null;
     }
-    return mailMessages.list[0];
+    return message.list[0];
   }
 
   async getMessageList(
-    mailFolderId: string,
+    folderId: string,
     paginate: { page: number; size: number },
   ) {
-    const index = this.getMessageIndexName(mailFolderId);
+    const index = this.getMessageIndexName(folderId);
     return await this.database.getDocumentList(MessageEntity, {
       index,
       paginate,
@@ -35,39 +47,36 @@ export class MessageService {
     });
   }
 
-  async createMessage(
-    mailFolderId: string,
-    payload: PayloadShape<MessageEntity>,
-  ) {
-    const mailMessage = await this.getMessageByExternalId(
-      mailFolderId,
+  async createMessage(folderId: string, payload: PayloadShape<MessageEntity>) {
+    const message = await this.getMessageByExternalId(
+      folderId,
       payload.externalId,
     );
-    if (mailMessage) {
+    if (message) {
       throw new UnprocessableEntityException(
         'Mail message already exists with this externalId',
       );
     }
 
-    const index = this.getMessageIndexName(mailFolderId);
+    const index = this.getMessageIndexName(folderId);
     return await this.database.createDocument<MessageEntity>(index, payload);
   }
 
   async updateMessage(
     accountId: string,
-    mailMessage: MessageEntity,
+    message: MessageEntity,
     updateFields: Partial<PayloadShape<MessageEntity>>,
   ) {
     const index = this.getMessageIndexName(accountId);
     return await this.database.updateDocument<MessageEntity>(
       index,
-      mailMessage.id,
+      message.id,
       updateFields,
     );
   }
 
-  async deleteMessage(mailFolderId: string, id: string) {
-    const index = this.getMessageIndexName(mailFolderId);
+  async deleteMessage(folderId: string, id: string) {
+    const index = this.getMessageIndexName(folderId);
     await this.database.deleteDocument(index, id);
   }
 }

@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PayloadShape } from '../../common/types';
 import { AccountEntity, IMailSyncService } from '../account/types';
 import {
+  SYNC_ACCOUNT_FOLDERS_EVENT,
   SYNC_ACCOUNT_MESSAGES_EVENT,
   USER_SSE_RESPONSE,
 } from '../event/constants';
@@ -94,6 +95,36 @@ export class MicrosoftAccountMailSyncService implements IMailSyncService {
       console.log(
         'Error while syncing messages of account',
         account.email,
+        err.message,
+      );
+    }
+  }
+
+  async markMessageAsRead({
+    account,
+    folder,
+    message,
+  }: {
+    account: AccountEntity;
+    folder: FolderEntity;
+    message: MessageEntity;
+  }): Promise<void> {
+    console.log(`Marking message as read of message ${message.id}`);
+    try {
+      await this.externalApiService.updateMessage({
+        account,
+        externalFolderId: folder.externalId,
+        externalMessageId: message.externalId,
+        update: { isRead: true },
+      });
+      console.log(`Message marked as read of message ${message.id}`);
+      this.event.emit(SYNC_ACCOUNT_FOLDERS_EVENT, {
+        userId: account.userId,
+        accountId: account.id,
+      });
+    } catch (err) {
+      console.log(
+        `Error while marking message as read of message ${message.id}:`,
         err.message,
       );
     }

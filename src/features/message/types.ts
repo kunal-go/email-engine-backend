@@ -30,7 +30,7 @@ export class MessageEntity extends BaseEntity {
   isFlagged: boolean;
   lastSyncedAt: number;
 
-  get mailFolderId() {
+  get folderId() {
     return this.index.split('__')[1];
   }
 
